@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAT Threshold Tracker | Toast Films LTD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --charcoal: #1a1a1a;
+            --charcoal-light: #2d2d2d;
+            --gold: #c9a962;
+            --gold-light: #e5d4a1;
+            --gold-dark: #9a7b3a;
+            --cream: #faf8f5;
+            --cream-dark: #f0ece4;
+            --sage: #7d9a8c;
+            --coral: #d4726a;
+            --text-dark: #1a1a1a;
+            --text-light: #6b6b6b;
+            --success: #4a9a7c;
+            --warning: #d4a63a;
+            --danger: #c45a52;
+            --blue: #5a7a9a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--text-dark);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: var(--charcoal);
+            padding: 2rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .header-btn {
+            padding: 0.4rem 0.75rem;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: transparent;
+            color: var(--cream);
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .header-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: var(--gold);
+        }
+
+        .logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--cream);
+            letter-spacing: 0.02em;
+        }
+
+        .logo span {
+            color: var(--gold);
+        }
+
+        .header-meta {
+            text-align: right;
+            color: var(--cream);
+            opacity: 0.7;
+            font-size: 0.875rem;
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2.5rem;
+        }
+
+        .status-banner {
+            background: linear-gradient(135deg, var(--charcoal) 0%, var(--charcoal-light) 100%);
+            border-radius: 20px;
+            padding: 2.5rem 3rem;
+            margin-bottom: 2rem;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr 1fr;
+            gap: 2.5rem;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
+            opacity: 0.1;
+            transform: translate(30%, -30%);
+        }
+
+        .threshold-info {
+            color: var(--cream);
+        }
+
+        .threshold-info h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .threshold-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .threshold-sub {
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+
+        .gauge-container {
+            position: relative;
+            width: 180px;
+            height: 180px;
+        }
+
+        .gauge-svg {
+            transform: rotate(-90deg);
+        }
+
+        .gauge-bg {
+            fill: none;
+            stroke: rgba(255,255,255,0.1);
+            stroke-width: 12;
+        }
+
+        .gauge-fill {
+            fill: none;
+            stroke-width: 12;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease-out, stroke 0.3s ease;
+        }
+
+        .gauge-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--cream);
+        }
+
+        .gauge-percent {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .gauge-label {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .remaining-info {
+            text-align: right;
+            color: var(--cream);
+        }
+
+        .remaining-info h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .remaining-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .remaining-value.safe { color: var(--success); }
+        .remaining-value.warning { color: var(--warning); }
+        .remaining-value.danger { color: var(--danger); }
+
+        .remaining-sub {
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+
+        .safe-invoice {
+            text-align: right;
+            color: var(--cream);
+            border-left: 1px solid rgba(255,255,255,0.1);
+            padding-left: 2.5rem;
+        }
+
+        .safe-invoice h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .safe-invoice-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            color: var(--sage);
+        }
+
+        .safe-invoice-sub {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            line-height: 1.4;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .card-badge {
+            background: var(--cream-dark);
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card-badge.non-uk {
+            background: var(--sage);
+            color: white;
+        }
+
+        .input-section {
+            background: var(--cream-dark);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            background: white;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--charcoal);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--gold-dark);
+        }
+
+        .btn-secondary {
+            background: var(--cream-dark);
+            color: var(--text-dark);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gold-light);
+        }
+
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background: white;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+            border-bottom: 2px solid var(--cream-dark);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--cream-dark);
+            font-variant-numeric: tabular-nums;
+            font-size: 0.9rem;
+        }
+
+        tr:hover td {
+            background: var(--cream);
+        }
+
+        .amount {
+            font-weight: 600;
+        }
+
+        .rolling-total {
+            color: var(--text-light);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-dot.safe { background: var(--success); }
+        .status-dot.warning { background: var(--warning); }
+        .status-dot.danger { background: var(--danger); }
+
+        .yoy-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .yoy-up {
+            background: rgba(74, 154, 124, 0.15);
+            color: var(--success);
+        }
+
+        .yoy-down {
+            background: rgba(212, 114, 106, 0.15);
+            color: var(--coral);
+        }
+
+        .yoy-new {
+            background: rgba(90, 122, 154, 0.15);
+            color: var(--blue);
+        }
+
+        .chart-container {
+            height: 280px;
+            position: relative;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .alert-success {
+            background: rgba(74, 154, 124, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-warning {
+            background: rgba(212, 166, 58, 0.1);
+            border: 1px solid var(--warning);
+            color: var(--gold-dark);
+        }
+
+        .alert-danger {
+            background: rgba(196, 90, 82, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+
+        .alert-info {
+            background: rgba(90, 122, 154, 0.1);
+            border: 1px solid var(--blue);
+            color: var(--blue);
+        }
+
+        .alert-seasonal {
+            background: linear-gradient(135deg, rgba(201, 169, 98, 0.15) 0%, rgba(212, 166, 58, 0.15) 100%);
+            border: 1px solid var(--gold);
+            color: var(--gold-dark);
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .summary-item {
+            background: var(--cream);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .summary-item h4 {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-item .value {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .info-banner {
+            background: linear-gradient(135deg, var(--sage) 0%, #5a7a6c 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+        }
+
+        .info-banner strong {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .year-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .year-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--cream-dark);
+            background: white;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .year-btn.active {
+            border-color: var(--gold);
+            background: var(--gold);
+            color: white;
+        }
+
+        .historical-warning {
+            background: var(--coral);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .insight-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+        }
+
+        .insight-item {
+            background: var(--cream);
+            padding: 1.25rem;
+            border-radius: 12px;
+        }
+
+        .insight-item h4 {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .insight-item .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .insight-item .detail {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .insight-item.highlight {
+            background: linear-gradient(135deg, var(--charcoal) 0%, var(--charcoal-light) 100%);
+            color: var(--cream);
+        }
+
+        .insight-item.highlight h4 {
+            color: var(--gold);
+        }
+
+        .insight-item.highlight .detail {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .seasonality-bar {
+            display: flex;
+            gap: 3px;
+            margin-top: 0.75rem;
+        }
+
+        .season-month {
+            flex: 1;
+            height: 40px;
+            border-radius: 4px;
+            position: relative;
+            background: var(--cream-dark);
+            overflow: hidden;
+        }
+
+        .season-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--gold);
+            transition: height 0.3s;
+        }
+
+        .season-label {
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.6rem;
+            color: var(--text-light);
+        }
+
+        .growth-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .growth-positive {
+            background: rgba(74, 154, 124, 0.15);
+            color: var(--success);
+        }
+
+        .growth-negative {
+            background: rgba(212, 114, 106, 0.15);
+            color: var(--coral);
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: var(--cream-dark);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--charcoal);
+            color: white;
+        }
+
+        @media (max-width: 1200px) {
+            .status-banner {
+                grid-template-columns: 1fr 1fr;
+                gap: 2rem;
+            }
+            
+            .safe-invoice {
+                border-left: none;
+                padding-left: 0;
+                border-top: 1px solid rgba(255,255,255,0.1);
+                padding-top: 1.5rem;
+            }
+            
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-banner {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 2rem;
+            }
+            
+            .gauge-container {
+                margin: 0 auto;
+            }
+            
+            .remaining-info, .safe-invoice {
+                text-align: center;
+                border: none;
+                padding: 0;
+            }
+            
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .insight-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .main-container {
+                padding: 1rem;
+            }
+            
+            .input-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .header-meta {
+                text-align: center;
+            }
+            
+            .insight-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-actions {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">Toast Films <span>Business Dashboard</span></div>
+        <div class="header-meta">
+            UK VAT Threshold: £90,000<br>
+            Rolling 12-Month Assessment
+            <div class="header-actions">
+                <button class="header-btn" onclick="exportBackup()">💾 Backup Data</button>
+                <button class="header-btn" onclick="document.getElementById('import-file').click()">📂 Restore</button>
+                <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(event)">
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div id="alert-container"></div>
+
+        <div class="status-banner">
+            <div class="threshold-info">
+                <h2>Rolling 12-Month UK Sales</h2>
+                <div class="threshold-value" id="rolling-total">£0</div>
+                <div class="threshold-sub" id="rolling-period">Last 12 months</div>
+            </div>
+
+            <div class="gauge-container">
+                <svg class="gauge-svg" viewBox="0 0 180 180" width="180" height="180">
+                    <circle class="gauge-bg" cx="90" cy="90" r="75" />
+                    <circle class="gauge-fill" id="gauge-fill" cx="90" cy="90" r="75" 
+                            stroke-dasharray="471" stroke-dashoffset="471" />
+                </svg>
+                <div class="gauge-center">
+                    <div class="gauge-percent" id="gauge-percent">0%</div>
+                    <div class="gauge-label">of threshold</div>
+                </div>
+            </div>
+
+            <div class="remaining-info">
+                <h2>Headroom Remaining</h2>
+                <div class="remaining-value safe" id="remaining-value">£90,000</div>
+                <div class="remaining-sub" id="remaining-sub">before registration</div>
+            </div>
+
+            <div class="safe-invoice">
+                <h2>Safe to Invoice Next Month</h2>
+                <div class="safe-invoice-value" id="safe-invoice-value">£0</div>
+                <div class="safe-invoice-sub" id="safe-invoice-sub">Calculation breakdown</div>
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Monthly Income Update</h3>
+                    <span class="card-badge">End of Month</span>
+                </div>
+
+                <div class="input-section">
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Month</label>
+                            <select id="input-month">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12" selected>December</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Year</label>
+                            <select id="input-year">
+                                <option value="2024">2024</option>
+                                <option value="2025" selected>2025</option>
+                                <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                                <option value="2028">2028</option>
+                                <option value="2029">2029</option>
+                                <option value="2030">2030</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-row" style="margin-top: 1rem;">
+                        <div class="input-group">
+                            <label>UK Wedding Income (£)</label>
+                            <input type="number" id="input-uk" placeholder="0.00" step="0.01">
+                        </div>
+                        <div class="input-group">
+                            <label>Non-UK Wedding Income (£)</label>
+                            <input type="number" id="input-non-uk" placeholder="0.00" step="0.01">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="saveMonth()">Save Month</button>
+                </div>
+
+                <div id="yoy-preview" style="display: none; margin-top: 1rem;"></div>
+
+                <div class="summary-grid" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="summary-item">
+                        <h4>Total UK</h4>
+                        <div class="value" id="total-uk">£0</div>
+                    </div>
+                    <div class="summary-item">
+                        <h4>Total Non-UK</h4>
+                        <div class="value" id="total-non-uk">£0</div>
+                    </div>
+                    <div class="summary-item">
+                        <h4>Avg Monthly (UK)</h4>
+                        <div class="value" id="avg-monthly">£0</div>
+                    </div>
+                    <div class="summary-item">
+                        <h4>Total (All Time)</h4>
+                        <div class="value" id="total-combined">£0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-header">
+                    <h3 class="card-title">Business Insights</h3>
+                    <span class="card-badge">Analytics</span>
+                </div>
+
+                <div class="insight-grid">
+                    <div class="insight-item highlight">
+                        <h4>📈 Year-on-Year Growth</h4>
+                        <div class="value" id="yoy-growth">—</div>
+                        <div class="detail" id="yoy-growth-detail">Comparing same periods</div>
+                    </div>
+                    <div class="insight-item">
+                        <h4>⏱️ Threshold Projection</h4>
+                        <div class="value" id="threshold-projection">—</div>
+                        <div class="detail" id="threshold-projection-detail">At current average pace</div>
+                    </div>
+                    <div class="insight-item">
+                        <h4>🏆 Best Performing Month</h4>
+                        <div class="value" id="best-month">—</div>
+                        <div class="detail" id="best-month-detail">Highest UK revenue</div>
+                    </div>
+                    <div class="insight-item">
+                        <h4>🌍 International Revenue</h4>
+                        <div class="value" id="intl-percent">—</div>
+                        <div class="detail" id="intl-detail">Of total income is VAT-exempt</div>
+                    </div>
+                    <div class="insight-item">
+                        <h4>📊 Avg Monthly Income</h4>
+                        <div class="value" id="avg-booking">—</div>
+                        <div class="detail" id="avg-booking-detail">Per month with income</div>
+                    </div>
+                    <div class="insight-item">
+                        <h4>📅 Peak Season</h4>
+                        <div class="value" id="peak-season">—</div>
+                        <div class="detail" id="peak-season-detail">Historically busiest months</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <h4 style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); margin-bottom: 0.75rem;">📅 Seasonality Pattern (UK Income by Month)</h4>
+                    <div class="seasonality-bar" id="seasonality-bar"></div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 1.5rem; font-size: 0.65rem; color: var(--text-light); text-transform: uppercase;">
+                        <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Rolling 12-Month Trend</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="rolling-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Year-on-Year Comparison</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="yoy-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card full-width">
+            <div class="card-header">
+                <h3 class="card-title">Monthly Breakdown</h3>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <div class="year-selector" id="year-selector"></div>
+                    <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Total Income</th>
+                            <th>vs Last Year</th>
+                            <th>UK Sales</th>
+                            <th>Non-UK Sales</th>
+                            <th>Rolling 12-Month (UK)</th>
+                            <th>Headroom</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const VAT_THRESHOLD = 90000;
+        
+        // Historical data from Toast Films transactions
+        const historicalData = {
+            uk: {
+                '2024-05': 7952.00,
+                '2024-06': 11290.00,
+                '2024-07': 23550.00,
+                '2024-08': 6642.00,
+                '2024-09': 4000.00,
+                '2024-10': 0.24,
+                '2024-11': 7000.87,
+                '2024-12': 1050.91,
+                '2025-01': 1000.00,
+                '2025-03': 6000.00,
+                '2025-04': 3850.00,
+                '2025-05': 4000.00,
+                '2025-06': 4500.00,
+                '2025-07': 10000.00,
+                '2025-08': 11850.00,
+                '2025-09': 7500.00,
+                '2025-10': 5700.00,
+                '2025-11': 5500.00
+            },
+            nonUk: {
+                '2024-04': 5360.00,
+                '2024-06': 2352.00,
+                '2024-07': 4650.00,
+                '2025-02': 1000.00,
+                '2025-03': 500.00,
+                '2025-04': 4700.00,
+                '2025-05': 5700.00,
+                '2025-07': 6300.00,
+                '2025-08': 6850.00,
+                '2025-12': 500.00
+            }
+        };
+
+        // Load saved data or use historical
+        let salesData = JSON.parse(localStorage.getItem('toastFilmsVAT')) || historicalData;
+        
+        let rollingChart = null;
+        let yoyChart = null;
+        let selectedYear = 'all';
+
+        function formatCurrency(amount) {
+            return '£' + amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatCurrencyShort(amount) {
+            if (amount >= 1000) {
+                return '£' + (amount / 1000).toFixed(1) + 'k';
+            }
+            return '£' + amount.toFixed(0);
+        }
+
+        function getMonthKey(year, month) {
+            return `${year}-${String(month).padStart(2, '0')}`;
+        }
+
+        function parseMonthKey(key) {
+            const [year, month] = key.split('-');
+            return { year: parseInt(year), month: parseInt(month) };
+        }
+
+        function getMonthName(month) {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return months[month - 1];
+        }
+
+        function getFullMonthName(month) {
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            return months[month - 1];
+        }
+
+        function getAllMonthsSorted() {
+            const allKeys = new Set([...Object.keys(salesData.uk), ...Object.keys(salesData.nonUk)]);
+            return Array.from(allKeys).sort();
+        }
+
+        function getRolling12MonthTotal(endKey) {
+            const { year: endYear, month: endMonth } = parseMonthKey(endKey);
+            let total = 0;
+            
+            for (let i = 0; i < 12; i++) {
+                let m = endMonth - i;
+                let y = endYear;
+                while (m <= 0) {
+                    m += 12;
+                    y--;
+                }
+                const key = getMonthKey(y, m);
+                total += salesData.uk[key] || 0;
+            }
+            
+            return total;
+        }
+
+        function getCurrentRolling12Month() {
+            const now = new Date();
+            const currentKey = getMonthKey(now.getFullYear(), now.getMonth() + 1);
+            return getRolling12MonthTotal(currentKey);
+        }
+
+        function getMonthDroppingOff() {
+            const now = new Date();
+            let dropMonth = now.getMonth() + 2; // Next month's calculation drops off month from 13 months ago
+            let dropYear = now.getFullYear() - 1;
+            if (dropMonth > 12) {
+                dropMonth -= 12;
+            }
+            const key = getMonthKey(dropYear, dropMonth);
+            return {
+                key: key,
+                amount: salesData.uk[key] || 0,
+                month: dropMonth,
+                year: dropYear
+            };
+        }
+
+        function calculateSafeToInvoice() {
+            const currentRolling = getCurrentRolling12Month();
+            const headroom = VAT_THRESHOLD - currentRolling;
+            const dropping = getMonthDroppingOff();
+            
+            // Next month, the dropping amount leaves the window, creating additional headroom
+            const safeAmount = headroom + dropping.amount;
+            
+            return {
+                safe: Math.max(0, safeAmount),
+                headroom: headroom,
+                dropping: dropping
+            };
+        }
+
+        function updateGauge(percent) {
+            const circumference = 2 * Math.PI * 75;
+            const offset = circumference - (percent / 100) * circumference;
+            const gauge = document.getElementById('gauge-fill');
+            
+            gauge.style.strokeDasharray = circumference;
+            gauge.style.strokeDashoffset = offset;
+            
+            if (percent >= 100) {
+                gauge.style.stroke = 'var(--danger)';
+            } else if (percent >= 80) {
+                gauge.style.stroke = 'var(--warning)';
+            } else {
+                gauge.style.stroke = 'var(--success)';
+            }
+            
+            document.getElementById('gauge-percent').textContent = Math.round(percent) + '%';
+        }
+
+        function updateAlerts(rollingTotal) {
+            const container = document.getElementById('alert-container');
+            const percent = (rollingTotal / VAT_THRESHOLD) * 100;
+            const seasonInfo = isApproachingPeakSeason();
+            
+            let alerts = '';
+            
+            // Primary VAT alert
+            if (rollingTotal >= VAT_THRESHOLD) {
+                alerts += `
+                    <div class="alert alert-danger">
+                        <span class="alert-icon">⚠️</span>
+                        <div>
+                            <strong>VAT Registration Required!</strong><br>
+                            Your rolling 12-month UK sales have exceeded £90,000. You must register for VAT within 30 days.
+                        </div>
+                    </div>
+                `;
+            } else if (percent >= 90) {
+                alerts += `
+                    <div class="alert alert-danger">
+                        <span class="alert-icon">🚨</span>
+                        <div>
+                            <strong>Critical: 90%+ of VAT threshold reached</strong><br>
+                            Only ${formatCurrency(VAT_THRESHOLD - rollingTotal)} remaining. Consider deferring UK income or accepting more non-UK bookings.
+                        </div>
+                    </div>
+                `;
+            } else if (percent >= 75) {
+                alerts += `
+                    <div class="alert alert-warning">
+                        <span class="alert-icon">⚠️</span>
+                        <div>
+                            <strong>Approaching VAT threshold</strong><br>
+                            You're at ${Math.round(percent)}% of the threshold. Monitor closely over the coming months.
+                        </div>
+                    </div>
+                `;
+            } else {
+                alerts += `
+                    <div class="alert alert-success">
+                        <span class="alert-icon">✓</span>
+                        <div>
+                            <strong>Comfortably below VAT threshold</strong><br>
+                            You have ${formatCurrency(VAT_THRESHOLD - rollingTotal)} of headroom remaining in your rolling 12-month period.
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Seasonal warning (only if above 65% and approaching/in peak season)
+            if (percent >= 65 && percent < 90) {
+                if (seasonInfo.approaching) {
+                    alerts += `
+                        <div class="alert alert-seasonal">
+                            <span class="alert-icon">📅</span>
+                            <div>
+                                <strong>Peak season ahead: ${seasonInfo.peakMonth}</strong><br>
+                                You're at ${Math.round(percent)}% of threshold with your busiest period ${seasonInfo.monthsAway === 1 ? 'next month' : 'in ' + seasonInfo.monthsAway + ' months'}. 
+                                Plan your UK invoicing carefully or prioritise non-UK bookings.
+                            </div>
+                        </div>
+                    `;
+                } else if (seasonInfo.inPeak) {
+                    alerts += `
+                        <div class="alert alert-seasonal">
+                            <span class="alert-icon">📅</span>
+                            <div>
+                                <strong>Currently in peak season</strong><br>
+                                ${seasonInfo.peakMonth} is historically one of your busiest months. You have ${formatCurrency(VAT_THRESHOLD - rollingTotal)} headroom remaining.
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            container.innerHTML = alerts;
+        }
+
+        function updateStatusBanner() {
+            const rollingTotal = getCurrentRolling12Month();
+            const remaining = VAT_THRESHOLD - rollingTotal;
+            const percent = (rollingTotal / VAT_THRESHOLD) * 100;
+            
+            document.getElementById('rolling-total').textContent = formatCurrency(rollingTotal);
+            document.getElementById('remaining-value').textContent = formatCurrency(Math.max(0, remaining));
+            
+            const remainingEl = document.getElementById('remaining-value');
+            remainingEl.classList.remove('safe', 'warning', 'danger');
+            
+            if (remaining <= 0) {
+                remainingEl.classList.add('danger');
+                document.getElementById('remaining-sub').textContent = 'THRESHOLD EXCEEDED';
+            } else if (percent >= 80) {
+                remainingEl.classList.add('warning');
+            } else {
+                remainingEl.classList.add('safe');
+            }
+            
+            updateGauge(Math.min(percent, 100));
+            updateAlerts(rollingTotal);
+            
+            // Update period text
+            const now = new Date();
+            const endMonth = getMonthName(now.getMonth() + 1);
+            let startMonth = now.getMonth() - 10;
+            let startYear = now.getFullYear();
+            if (startMonth <= 0) {
+                startMonth += 12;
+                startYear--;
+            }
+            document.getElementById('rolling-period').textContent = 
+                `${getMonthName(startMonth)} ${startYear} – ${endMonth} ${now.getFullYear()}`;
+
+            // Safe to invoice calculation
+            const safeCalc = calculateSafeToInvoice();
+            document.getElementById('safe-invoice-value').textContent = formatCurrency(safeCalc.safe);
+            
+            const nextMonth = new Date();
+            nextMonth.setMonth(nextMonth.getMonth() + 1);
+            const nextMonthName = getFullMonthName(nextMonth.getMonth() + 1);
+            
+            document.getElementById('safe-invoice-sub').innerHTML = 
+                `In ${nextMonthName}: ${formatCurrency(safeCalc.headroom)} headroom + ${formatCurrency(safeCalc.dropping.amount)} dropping off (${getMonthName(safeCalc.dropping.month)} ${safeCalc.dropping.year})`;
+        }
+
+        function updateSummaryStats() {
+            const ukTotal = Object.values(salesData.uk).reduce((a, b) => a + b, 0);
+            const nonUkTotal = Object.values(salesData.nonUk).reduce((a, b) => a + b, 0);
+            const ukMonths = Object.keys(salesData.uk).filter(k => salesData.uk[k] > 0).length;
+            const avgMonthly = ukMonths > 0 ? ukTotal / ukMonths : 0;
+            
+            document.getElementById('total-uk').textContent = formatCurrency(ukTotal);
+            document.getElementById('total-non-uk').textContent = formatCurrency(nonUkTotal);
+            document.getElementById('avg-monthly').textContent = formatCurrency(avgMonthly);
+            document.getElementById('total-combined').textContent = formatCurrency(ukTotal + nonUkTotal);
+        }
+
+        function updateBusinessInsights() {
+            const ukTotal = Object.values(salesData.uk).reduce((a, b) => a + b, 0);
+            const nonUkTotal = Object.values(salesData.nonUk).reduce((a, b) => a + b, 0);
+            const totalRevenue = ukTotal + nonUkTotal;
+            
+            // Year-on-Year Growth
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1;
+            
+            let thisYearTotal = 0;
+            let lastYearTotal = 0;
+            
+            for (let m = 1; m <= currentMonth; m++) {
+                const thisYearKey = getMonthKey(currentYear, m);
+                const lastYearKey = getMonthKey(currentYear - 1, m);
+                thisYearTotal += (salesData.uk[thisYearKey] || 0) + (salesData.nonUk[thisYearKey] || 0);
+                lastYearTotal += (salesData.uk[lastYearKey] || 0) + (salesData.nonUk[lastYearKey] || 0);
+            }
+            
+            if (lastYearTotal > 0) {
+                const growthPercent = ((thisYearTotal - lastYearTotal) / lastYearTotal * 100);
+                const growthClass = growthPercent >= 0 ? 'growth-positive' : 'growth-negative';
+                const growthSign = growthPercent >= 0 ? '+' : '';
+                document.getElementById('yoy-growth').innerHTML = 
+                    `<span class="growth-indicator ${growthClass}">${growthSign}${growthPercent.toFixed(1)}%</span>`;
+                document.getElementById('yoy-growth-detail').textContent = 
+                    `Jan-${getMonthName(currentMonth)} ${currentYear} vs ${currentYear - 1}`;
+            } else {
+                document.getElementById('yoy-growth').textContent = 'N/A';
+                document.getElementById('yoy-growth-detail').textContent = 'Insufficient prior year data';
+            }
+            
+            // Best Performing Month
+            let bestMonth = null;
+            let bestAmount = 0;
+            Object.entries(salesData.uk).forEach(([key, amount]) => {
+                if (amount > bestAmount) {
+                    bestAmount = amount;
+                    bestMonth = key;
+                }
+            });
+            
+            if (bestMonth) {
+                const { year, month } = parseMonthKey(bestMonth);
+                document.getElementById('best-month').textContent = `${getMonthName(month)} ${year}`;
+                document.getElementById('best-month-detail').textContent = formatCurrency(bestAmount) + ' UK revenue';
+            }
+            
+            // International Revenue Percentage
+            const intlPercent = totalRevenue > 0 ? (nonUkTotal / totalRevenue * 100) : 0;
+            document.getElementById('intl-percent').textContent = intlPercent.toFixed(1) + '%';
+            document.getElementById('intl-detail').textContent = `${formatCurrency(nonUkTotal)} VAT-exempt`;
+            
+            // Average Booking Value (months with income)
+            const ukMonthsWithIncome = Object.values(salesData.uk).filter(v => v > 0).length;
+            const avgBooking = ukMonthsWithIncome > 0 ? ukTotal / ukMonthsWithIncome : 0;
+            document.getElementById('avg-booking').textContent = formatCurrency(avgBooking);
+            document.getElementById('avg-booking-detail').textContent = `Across ${ukMonthsWithIncome} active months`;
+            
+            // Threshold Projection
+            const projection = calculateThresholdProjection();
+            document.getElementById('threshold-projection').innerHTML = 
+                `<span class="${projection.status === 'danger' ? 'growth-indicator growth-negative' : projection.status === 'warning' ? 'growth-indicator' : ''}" style="${projection.status === 'warning' ? 'background: rgba(212,166,58,0.15); color: var(--warning);' : ''}">${projection.message}</span>`;
+            document.getElementById('threshold-projection-detail').textContent = 
+                projection.months === 0 ? 'VAT registration required' : 
+                projection.months === null ? 'Insufficient data' :
+                `Until VAT threshold at current pace`;
+            
+            // Peak Season
+            const peakMonths = getPeakSeasonMonths();
+            if (peakMonths.length > 0) {
+                document.getElementById('peak-season').textContent = 
+                    peakMonths.map(p => getMonthName(p.month)).join(', ');
+                document.getElementById('peak-season-detail').textContent = 
+                    `Avg ${formatCurrencyShort(peakMonths[0].avg)}/month in peak`;
+            } else {
+                document.getElementById('peak-season').textContent = '—';
+                document.getElementById('peak-season-detail').textContent = 'Insufficient data';
+            }
+            
+            // Seasonality
+            updateSeasonality();
+        }
+
+        function updateSeasonality() {
+            const monthTotals = Array(12).fill(0);
+            const monthCounts = Array(12).fill(0);
+            
+            Object.entries(salesData.uk).forEach(([key, amount]) => {
+                const { month } = parseMonthKey(key);
+                monthTotals[month - 1] += amount;
+                monthCounts[month - 1]++;
+            });
+            
+            const monthAverages = monthTotals.map((total, i) => 
+                monthCounts[i] > 0 ? total / monthCounts[i] : 0
+            );
+            
+            const maxAvg = Math.max(...monthAverages);
+            
+            const container = document.getElementById('seasonality-bar');
+            container.innerHTML = monthAverages.map((avg, i) => {
+                const height = maxAvg > 0 ? (avg / maxAvg * 100) : 0;
+                const isHighSeason = height > 60;
+                return `
+                    <div class="season-month" title="${getFullMonthName(i + 1)}: ${formatCurrency(avg)} avg">
+                        <div class="season-fill" style="height: ${height}%; background: ${isHighSeason ? 'var(--gold)' : 'var(--gold-light)'}"></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateRollingChart() {
+            const months = getAllMonthsSorted();
+            const labels = [];
+            const rollingData = [];
+            const thresholdData = [];
+            
+            months.forEach(key => {
+                const { year, month } = parseMonthKey(key);
+                labels.push(`${getMonthName(month)} ${year}`);
+                rollingData.push(getRolling12MonthTotal(key));
+                thresholdData.push(VAT_THRESHOLD);
+            });
+            
+            if (rollingChart) {
+                rollingChart.destroy();
+            }
+            
+            const ctx = document.getElementById('rolling-chart').getContext('2d');
+            rollingChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Rolling 12-Month UK Sales',
+                            data: rollingData,
+                            borderColor: '#c9a962',
+                            backgroundColor: 'rgba(201, 169, 98, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#c9a962'
+                        },
+                        {
+                            label: 'VAT Threshold',
+                            data: thresholdData,
+                            borderColor: '#d4726a',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15,
+                                font: { family: 'DM Sans', size: 11 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '£' + (value / 1000) + 'k';
+                                },
+                                font: { family: 'DM Sans', size: 10 }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        x: {
+                            ticks: { font: { family: 'DM Sans', size: 9 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateYoYChart() {
+            const years = [...new Set(getAllMonthsSorted().map(k => parseMonthKey(k).year))].sort();
+            const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            
+            const colors = ['#c9a962', '#7d9a8c', '#5a7a9a', '#d4726a'];
+            
+            const datasets = years.map((year, index) => {
+                const data = [];
+                for (let m = 1; m <= 12; m++) {
+                    const key = getMonthKey(year, m);
+                    const ukAmount = salesData.uk[key] || 0;
+                    const nonUkAmount = salesData.nonUk[key] || 0;
+                    data.push(ukAmount + nonUkAmount);
+                }
+                return {
+                    label: year.toString(),
+                    data: data,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + '20',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 3
+                };
+            });
+            
+            if (yoyChart) {
+                yoyChart.destroy();
+            }
+            
+            const ctx = document.getElementById('yoy-chart').getContext('2d');
+            yoyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15,
+                                font: { family: 'DM Sans', size: 11 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '£' + (value / 1000) + 'k';
+                                },
+                                font: { family: 'DM Sans', size: 10 }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        x: {
+                            ticks: { font: { family: 'DM Sans', size: 10 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getYoYComparison(year, month) {
+            const currentKey = getMonthKey(year, month);
+            const lastYearKey = getMonthKey(year - 1, month);
+            
+            const currentUk = salesData.uk[currentKey] || 0;
+            const currentNonUk = salesData.nonUk[currentKey] || 0;
+            const currentTotal = currentUk + currentNonUk;
+            
+            const lastYearUk = salesData.uk[lastYearKey] || 0;
+            const lastYearNonUk = salesData.nonUk[lastYearKey] || 0;
+            const lastYearTotal = lastYearUk + lastYearNonUk;
+            
+            if (lastYearTotal === 0 && currentTotal > 0) {
+                return { type: 'new', percent: null, lastYear: 0 };
+            } else if (lastYearTotal === 0) {
+                return { type: 'none', percent: null, lastYear: 0 };
+            }
+            
+            const percentChange = ((currentTotal - lastYearTotal) / lastYearTotal) * 100;
+            return {
+                type: percentChange >= 0 ? 'up' : 'down',
+                percent: percentChange,
+                lastYear: lastYearTotal
+            };
+        }
+
+        function updateTable() {
+            const months = getAllMonthsSorted();
+            const years = [...new Set(months.map(k => parseMonthKey(k).year))];
+            
+            const yearSelector = document.getElementById('year-selector');
+            yearSelector.innerHTML = `
+                <button class="year-btn ${selectedYear === 'all' ? 'active' : ''}" onclick="filterYear('all')">All</button>
+                ${years.map(y => `
+                    <button class="year-btn ${selectedYear == y ? 'active' : ''}" onclick="filterYear(${y})">${y}</button>
+                `).join('')}
+            `;
+            
+            const filteredMonths = selectedYear === 'all' 
+                ? months 
+                : months.filter(k => parseMonthKey(k).year == selectedYear);
+            
+            const tbody = document.getElementById('data-table');
+            tbody.innerHTML = filteredMonths.map(key => {
+                const { year, month } = parseMonthKey(key);
+                const ukSales = salesData.uk[key] || 0;
+                const nonUkSales = salesData.nonUk[key] || 0;
+                const rollingTotal = getRolling12MonthTotal(key);
+                const headroom = VAT_THRESHOLD - rollingTotal;
+                
+                const yoy = getYoYComparison(year, month);
+                let yoyBadge = '';
+                if (yoy.type === 'up') {
+                    yoyBadge = `<span class="yoy-badge yoy-up">↑ ${yoy.percent.toFixed(0)}%</span>`;
+                } else if (yoy.type === 'down') {
+                    yoyBadge = `<span class="yoy-badge yoy-down">↓ ${Math.abs(yoy.percent).toFixed(0)}%</span>`;
+                } else if (yoy.type === 'new') {
+                    yoyBadge = `<span class="yoy-badge yoy-new">NEW</span>`;
+                } else {
+                    yoyBadge = '<span style="color: var(--text-light);">—</span>';
+                }
+                
+                let status, statusClass;
+                if (headroom <= 0) {
+                    status = 'EXCEEDED';
+                    statusClass = 'danger';
+                } else if (headroom < 10000) {
+                    status = 'Critical';
+                    statusClass = 'danger';
+                } else if (headroom < 20000) {
+                    status = 'Warning';
+                    statusClass = 'warning';
+                } else {
+                    status = 'Safe';
+                    statusClass = 'safe';
+                }
+                
+                return `
+                    <tr>
+                        <td><strong>${getMonthName(month)} ${year}</strong></td>
+                        <td class="amount" style="font-size: 1rem;">${formatCurrency(ukSales + nonUkSales)}</td>
+                        <td>${yoyBadge}</td>
+                        <td>${ukSales > 0 ? formatCurrency(ukSales) : '–'}</td>
+                        <td style="color: var(--sage)">${nonUkSales > 0 ? formatCurrency(nonUkSales) : '–'}</td>
+                        <td class="rolling-total">${formatCurrency(rollingTotal)}</td>
+                        <td class="${statusClass}" style="font-weight: 600">${formatCurrency(Math.max(0, headroom))}</td>
+                        <td>
+                            <span class="status-dot ${statusClass}"></span>
+                            ${status}
+                        </td>
+                    </tr>
+                `;
+            }).reverse().join('');
+        }
+
+        function filterYear(year) {
+            selectedYear = year;
+            updateTable();
+        }
+
+        function saveMonth() {
+            const month = parseInt(document.getElementById('input-month').value);
+            const year = parseInt(document.getElementById('input-year').value);
+            const ukAmount = parseFloat(document.getElementById('input-uk').value) || 0;
+            const nonUkAmount = parseFloat(document.getElementById('input-non-uk').value) || 0;
+            
+            if (ukAmount === 0 && nonUkAmount === 0) {
+                alert('Please enter at least one income figure');
+                return;
+            }
+            
+            const key = getMonthKey(year, month);
+            
+            // Get YoY comparison for the confirmation message
+            const lastYearKey = getMonthKey(year - 1, month);
+            const lastYearUk = salesData.uk[lastYearKey] || 0;
+            const lastYearNonUk = salesData.nonUk[lastYearKey] || 0;
+            const lastYearTotal = lastYearUk + lastYearNonUk;
+            const currentTotal = ukAmount + nonUkAmount;
+            
+            // Replace values for the month
+            if (ukAmount > 0) {
+                salesData.uk[key] = ukAmount;
+            } else {
+                delete salesData.uk[key];
+            }
+            
+            if (nonUkAmount > 0) {
+                salesData.nonUk[key] = nonUkAmount;
+            } else {
+                delete salesData.nonUk[key];
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('toastFilmsVAT', JSON.stringify(salesData));
+            
+            // Clear inputs
+            document.getElementById('input-uk').value = '';
+            document.getElementById('input-non-uk').value = '';
+            
+            // Refresh all displays
+            refresh();
+            
+            // Show confirmation with YoY comparison
+            const monthName = getMonthName(month);
+            let message = `${monthName} ${year} updated successfully!\n\nTotal: ${formatCurrency(currentTotal)}`;
+            
+            if (lastYearTotal > 0) {
+                const percentChange = ((currentTotal - lastYearTotal) / lastYearTotal * 100);
+                const direction = percentChange >= 0 ? 'up' : 'down';
+                message += `\n\nCompared to ${monthName} ${year - 1}: ${direction} ${Math.abs(percentChange).toFixed(1)}%`;
+            }
+            
+            alert(message);
+        }
+
+        function exportBackup() {
+            const backup = {
+                version: 1,
+                exportDate: new Date().toISOString(),
+                data: salesData
+            };
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `toast-films-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            alert('Backup saved! Store this file safely.');
+        }
+
+        function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const backup = JSON.parse(e.target.result);
+                    if (backup.data && backup.data.uk && backup.data.nonUk) {
+                        if (confirm(`Restore backup from ${backup.exportDate ? new Date(backup.exportDate).toLocaleDateString() : 'unknown date'}?\n\nThis will replace all current data.`)) {
+                            salesData = backup.data;
+                            localStorage.setItem('toastFilmsVAT', JSON.stringify(salesData));
+                            refresh();
+                            alert('Data restored successfully!');
+                        }
+                    } else {
+                        alert('Invalid backup file format.');
+                    }
+                } catch (err) {
+                    alert('Error reading backup file: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function calculateThresholdProjection() {
+            const currentRolling = getCurrentRolling12Month();
+            const headroom = VAT_THRESHOLD - currentRolling;
+            
+            if (headroom <= 0) {
+                return { months: 0, message: 'Exceeded', status: 'danger' };
+            }
+            
+            // Calculate average monthly UK income over last 12 months
+            const now = new Date();
+            let totalUk = 0;
+            let monthsWithData = 0;
+            
+            for (let i = 0; i < 12; i++) {
+                let m = now.getMonth() + 1 - i;
+                let y = now.getFullYear();
+                while (m <= 0) { m += 12; y--; }
+                const key = getMonthKey(y, m);
+                if (salesData.uk[key]) {
+                    totalUk += salesData.uk[key];
+                    monthsWithData++;
+                }
+            }
+            
+            if (monthsWithData === 0) {
+                return { months: null, message: 'No data', status: 'safe' };
+            }
+            
+            const avgMonthlyUk = totalUk / monthsWithData;
+            
+            if (avgMonthlyUk <= 0) {
+                return { months: null, message: 'N/A', status: 'safe' };
+            }
+            
+            // This is simplified - in reality the rolling window shifts
+            // But it gives a rough indication
+            const monthsToThreshold = Math.floor(headroom / avgMonthlyUk);
+            
+            if (monthsToThreshold > 24) {
+                return { months: monthsToThreshold, message: '2+ years', status: 'safe' };
+            } else if (monthsToThreshold > 12) {
+                return { months: monthsToThreshold, message: `~${monthsToThreshold} months`, status: 'safe' };
+            } else if (monthsToThreshold > 6) {
+                return { months: monthsToThreshold, message: `~${monthsToThreshold} months`, status: 'warning' };
+            } else {
+                return { months: monthsToThreshold, message: `~${monthsToThreshold} months`, status: 'danger' };
+            }
+        }
+
+        function getPeakSeasonMonths() {
+            const monthTotals = Array(12).fill(0);
+            const monthCounts = Array(12).fill(0);
+            
+            Object.entries(salesData.uk).forEach(([key, amount]) => {
+                const { month } = parseMonthKey(key);
+                monthTotals[month - 1] += amount;
+                monthCounts[month - 1]++;
+            });
+            
+            const monthAverages = monthTotals.map((total, i) => ({
+                month: i + 1,
+                avg: monthCounts[i] > 0 ? total / monthCounts[i] : 0
+            }));
+            
+            // Sort by average and get top 3
+            const sorted = [...monthAverages].sort((a, b) => b.avg - a.avg);
+            const peakMonths = sorted.slice(0, 3).filter(m => m.avg > 0);
+            
+            return peakMonths;
+        }
+
+        function isApproachingPeakSeason() {
+            const now = new Date();
+            const currentMonth = now.getMonth() + 1;
+            const peakMonths = getPeakSeasonMonths();
+            
+            if (peakMonths.length === 0) return { approaching: false };
+            
+            const peakMonthNumbers = peakMonths.map(p => p.month);
+            
+            // Check if we're 1-2 months before a peak month
+            for (const peak of peakMonthNumbers) {
+                let monthsUntilPeak = peak - currentMonth;
+                if (monthsUntilPeak < 0) monthsUntilPeak += 12;
+                
+                if (monthsUntilPeak > 0 && monthsUntilPeak <= 2) {
+                    return {
+                        approaching: true,
+                        peakMonth: getFullMonthName(peak),
+                        monthsAway: monthsUntilPeak
+                    };
+                }
+            }
+            
+            // Check if we're in a peak month
+            if (peakMonthNumbers.includes(currentMonth)) {
+                return {
+                    inPeak: true,
+                    peakMonth: getFullMonthName(currentMonth)
+                };
+            }
+            
+            return { approaching: false };
+        }
+
+        function exportData() {
+            const months = getAllMonthsSorted();
+            let csv = 'Month,Total Income,YoY Change,UK Sales,Non-UK Sales,Rolling 12-Month (UK),Headroom,Status\n';
+            
+            months.forEach(key => {
+                const { year, month } = parseMonthKey(key);
+                const ukSales = salesData.uk[key] || 0;
+                const nonUkSales = salesData.nonUk[key] || 0;
+                const total = ukSales + nonUkSales;
+                const rollingTotal = getRolling12MonthTotal(key);
+                const headroom = VAT_THRESHOLD - rollingTotal;
+                const status = headroom <= 0 ? 'EXCEEDED' : headroom < 10000 ? 'Critical' : headroom < 20000 ? 'Warning' : 'Safe';
+                
+                const yoy = getYoYComparison(year, month);
+                let yoyStr = '';
+                if (yoy.type === 'up') yoyStr = `+${yoy.percent.toFixed(1)}%`;
+                else if (yoy.type === 'down') yoyStr = `${yoy.percent.toFixed(1)}%`;
+                else if (yoy.type === 'new') yoyStr = 'NEW';
+                
+                csv += `${getMonthName(month)} ${year},${total.toFixed(2)},${yoyStr},${ukSales.toFixed(2)},${nonUkSales.toFixed(2)},${rollingTotal.toFixed(2)},${Math.max(0, headroom).toFixed(2)},${status}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `toast-films-business-data-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        function refresh() {
+            updateStatusBanner();
+            updateSummaryStats();
+            updateBusinessInsights();
+            updateRollingChart();
+            updateYoYChart();
+            updateTable();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', refresh);
+    </script>
+</body>
+</html>
