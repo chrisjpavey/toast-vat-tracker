@@ -70,6 +70,31 @@
             border-color: var(--gold);
         }
 
+        .help-icon {
+            display: inline-block;
+            cursor: help;
+            color: var(--gold);
+            font-size: 0.8rem;
+            position: relative;
+        }
+
+        .help-icon:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--charcoal);
+            color: var(--cream);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            width: 250px;
+            z-index: 100;
+            line-height: 1.4;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
         .logo {
             font-family: 'Cormorant Garamond', serif;
             font-size: 1.75rem;
@@ -777,7 +802,10 @@
     <header class="header">
         <div class="logo">Toast Films <span>Business Dashboard</span></div>
         <div class="header-meta">
-            UK VAT Threshold: £90,000<br>
+            <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end;">
+                <span>UK VAT Threshold: £</span>
+                <input type="number" id="threshold-input" style="width: 70px; padding: 0.25rem 0.5rem; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: var(--cream); border-radius: 4px; font-size: 0.875rem;" onchange="updateThreshold(this.value)">
+            </div>
             Rolling 12-Month Assessment
             <div class="header-actions">
                 <button class="header-btn" onclick="exportBackup()">💾 Backup Data</button>
@@ -816,7 +844,7 @@
             </div>
 
             <div class="safe-invoice">
-                <h2>Safe to Invoice Next Month</h2>
+                <h2>Safe UK Invoicing (Next Month)</h2>
                 <div class="safe-invoice-value" id="safe-invoice-value">£0</div>
                 <div class="safe-invoice-sub" id="safe-invoice-sub">Calculation breakdown</div>
             </div>
@@ -825,8 +853,8 @@
         <div class="grid-3">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Monthly Income Update</h3>
-                    <span class="card-badge">End of Month</span>
+                    <h3 class="card-title">Monthly Invoiced Turnover</h3>
+                    <span class="card-badge">By Invoice Date</span>
                 </div>
 
                 <div class="input-section">
@@ -863,26 +891,29 @@
                     </div>
                     <div class="input-row" style="margin-top: 1rem;">
                         <div class="input-group">
-                            <label>UK Wedding Income (£)</label>
+                            <label>UK Invoiced Turnover (£) <span class="help-icon" title="Net total of UK invoices issued this month (by invoice date, not payment date). Use negative values for credit notes/refunds.">ⓘ</span></label>
                             <input type="number" id="input-uk" placeholder="0.00" step="0.01">
                         </div>
                         <div class="input-group">
-                            <label>Non-UK Wedding Income (£)</label>
+                            <label>Non-UK Invoiced Turnover (£) <span class="help-icon" title="Revenue outside the scope of UK VAT based on place-of-supply rules. Typically weddings where the event takes place outside the UK. Confirm with your accountant if unsure.">ⓘ</span></label>
                             <input type="number" id="input-non-uk" placeholder="0.00" step="0.01">
                         </div>
                     </div>
                     <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="saveMonth()">Save Month</button>
+                    <p style="margin-top: 0.75rem; font-size: 0.7rem; color: var(--text-light); line-height: 1.4;">
+                        ⚠️ <strong>Important:</strong> Enter by invoice date, not payment date. VAT threshold is based on when invoices are issued. Use negative values for credit notes or refunds.
+                    </p>
                 </div>
 
                 <div id="yoy-preview" style="display: none; margin-top: 1rem;"></div>
 
                 <div class="summary-grid" style="grid-template-columns: repeat(2, 1fr);">
                     <div class="summary-item">
-                        <h4>Total UK</h4>
+                        <h4>Total UK (Net)</h4>
                         <div class="value" id="total-uk">£0</div>
                     </div>
                     <div class="summary-item">
-                        <h4>Total Non-UK</h4>
+                        <h4>Total Non-UK (Net)</h4>
                         <div class="value" id="total-non-uk">£0</div>
                     </div>
                     <div class="summary-item">
@@ -978,10 +1009,10 @@
                     <thead>
                         <tr>
                             <th>Month</th>
-                            <th>Total Income</th>
+                            <th>Total Net Turnover</th>
                             <th>vs Last Year</th>
-                            <th>UK Sales</th>
-                            <th>Non-UK Sales</th>
+                            <th>UK (Net)</th>
+                            <th>Non-UK (Net)</th>
                             <th>Rolling 12-Month (UK)</th>
                             <th>Headroom</th>
                             <th>Status</th>
@@ -994,7 +1025,7 @@
     </main>
 
     <script>
-        const VAT_THRESHOLD = 90000;
+        const DEFAULT_VAT_THRESHOLD = 90000;
         
         // Historical data from Toast Films transactions
         const historicalData = {
@@ -1029,11 +1060,21 @@
                 '2025-07': 6300.00,
                 '2025-08': 6850.00,
                 '2025-12': 500.00
-            }
+            },
+            threshold: DEFAULT_VAT_THRESHOLD
         };
 
         // Load saved data or use historical
         let salesData = JSON.parse(localStorage.getItem('toastFilmsVAT')) || historicalData;
+        
+        // Ensure threshold exists in legacy data
+        if (!salesData.threshold) {
+            salesData.threshold = DEFAULT_VAT_THRESHOLD;
+        }
+        
+        function getThreshold() {
+            return salesData.threshold || DEFAULT_VAT_THRESHOLD;
+        }
         
         let rollingChart = null;
         let yoyChart = null;
@@ -1116,7 +1157,7 @@
 
         function calculateSafeToInvoice() {
             const currentRolling = getCurrentRolling12Month();
-            const headroom = VAT_THRESHOLD - currentRolling;
+            const headroom = getThreshold() - currentRolling;
             const dropping = getMonthDroppingOff();
             
             // Next month, the dropping amount leaves the window, creating additional headroom
@@ -1150,13 +1191,13 @@
 
         function updateAlerts(rollingTotal) {
             const container = document.getElementById('alert-container');
-            const percent = (rollingTotal / VAT_THRESHOLD) * 100;
+            const percent = (rollingTotal / getThreshold()) * 100;
             const seasonInfo = isApproachingPeakSeason();
             
             let alerts = '';
             
             // Primary VAT alert
-            if (rollingTotal >= VAT_THRESHOLD) {
+            if (rollingTotal >= getThreshold()) {
                 alerts += `
                     <div class="alert alert-danger">
                         <span class="alert-icon">⚠️</span>
@@ -1172,7 +1213,7 @@
                         <span class="alert-icon">🚨</span>
                         <div>
                             <strong>Critical: 90%+ of VAT threshold reached</strong><br>
-                            Only ${formatCurrency(VAT_THRESHOLD - rollingTotal)} remaining. Consider deferring UK income or accepting more non-UK bookings.
+                            Only ${formatCurrency(getThreshold() - rollingTotal)} remaining. Consider deferring UK income or accepting more non-UK bookings.
                         </div>
                     </div>
                 `;
@@ -1192,7 +1233,7 @@
                         <span class="alert-icon">✓</span>
                         <div>
                             <strong>Comfortably below VAT threshold</strong><br>
-                            You have ${formatCurrency(VAT_THRESHOLD - rollingTotal)} of headroom remaining in your rolling 12-month period.
+                            You have ${formatCurrency(getThreshold() - rollingTotal)} of headroom remaining in your rolling 12-month period.
                         </div>
                     </div>
                 `;
@@ -1217,7 +1258,7 @@
                             <span class="alert-icon">📅</span>
                             <div>
                                 <strong>Currently in peak season</strong><br>
-                                ${seasonInfo.peakMonth} is historically one of your busiest months. You have ${formatCurrency(VAT_THRESHOLD - rollingTotal)} headroom remaining.
+                                ${seasonInfo.peakMonth} is historically one of your busiest months. You have ${formatCurrency(getThreshold() - rollingTotal)} headroom remaining.
                             </div>
                         </div>
                     `;
@@ -1229,8 +1270,8 @@
 
         function updateStatusBanner() {
             const rollingTotal = getCurrentRolling12Month();
-            const remaining = VAT_THRESHOLD - rollingTotal;
-            const percent = (rollingTotal / VAT_THRESHOLD) * 100;
+            const remaining = getThreshold() - rollingTotal;
+            const percent = (rollingTotal / getThreshold()) * 100;
             
             document.getElementById('rolling-total').textContent = formatCurrency(rollingTotal);
             document.getElementById('remaining-value').textContent = formatCurrency(Math.max(0, remaining));
@@ -1250,17 +1291,15 @@
             updateGauge(Math.min(percent, 100));
             updateAlerts(rollingTotal);
             
-            // Update period text
+            // Update period text with exact months for auditability
             const now = new Date();
-            const endMonth = getMonthName(now.getMonth() + 1);
-            let startMonth = now.getMonth() - 10;
-            let startYear = now.getFullYear();
-            if (startMonth <= 0) {
-                startMonth += 12;
-                startYear--;
-            }
+            const endMonth = now.getMonth() + 1;
+            const endYear = now.getFullYear();
+            let startMonth = endMonth;
+            let startYear = endYear - 1;
+            
             document.getElementById('rolling-period').textContent = 
-                `${getMonthName(startMonth)} ${startYear} – ${endMonth} ${now.getFullYear()}`;
+                `${getMonthName(startMonth)} ${startYear} → ${getMonthName(endMonth)} ${endYear} (12 months)`;
 
             // Safe to invoice calculation
             const safeCalc = calculateSafeToInvoice();
@@ -1271,7 +1310,23 @@
             const nextMonthName = getFullMonthName(nextMonth.getMonth() + 1);
             
             document.getElementById('safe-invoice-sub').innerHTML = 
-                `In ${nextMonthName}: ${formatCurrency(safeCalc.headroom)} headroom + ${formatCurrency(safeCalc.dropping.amount)} dropping off (${getMonthName(safeCalc.dropping.month)} ${safeCalc.dropping.year})`;
+                `Max UK invoices in ${nextMonthName} ≤ £${safeCalc.safe.toLocaleString('en-GB', {minimumFractionDigits: 0, maximumFractionDigits: 0})} to stay under threshold`;
+        }
+
+        function updateThreshold(value) {
+            const newThreshold = parseFloat(value);
+            if (isNaN(newThreshold) || newThreshold <= 0) {
+                alert('Please enter a valid threshold amount');
+                document.getElementById('threshold-input').value = salesData.threshold;
+                return;
+            }
+            salesData.threshold = newThreshold;
+            localStorage.setItem('toastFilmsVAT', JSON.stringify(salesData));
+            refresh();
+        }
+
+        function initThresholdInput() {
+            document.getElementById('threshold-input').value = getThreshold();
         }
 
         function updateSummaryStats() {
@@ -1409,7 +1464,7 @@
                 const { year, month } = parseMonthKey(key);
                 labels.push(`${getMonthName(month)} ${year}`);
                 rollingData.push(getRolling12MonthTotal(key));
-                thresholdData.push(VAT_THRESHOLD);
+                thresholdData.push(getThreshold());
             });
             
             if (rollingChart) {
@@ -1609,7 +1664,7 @@
                 const ukSales = salesData.uk[key] || 0;
                 const nonUkSales = salesData.nonUk[key] || 0;
                 const rollingTotal = getRolling12MonthTotal(key);
-                const headroom = VAT_THRESHOLD - rollingTotal;
+                const headroom = getThreshold() - rollingTotal;
                 
                 const yoy = getYoYComparison(year, month);
                 let yoyBadge = '';
@@ -1641,10 +1696,10 @@
                 return `
                     <tr>
                         <td><strong>${getMonthName(month)} ${year}</strong></td>
-                        <td class="amount" style="font-size: 1rem;">${formatCurrency(ukSales + nonUkSales)}</td>
+                        <td class="amount" style="font-size: 1rem; ${(ukSales + nonUkSales) < 0 ? 'color: var(--coral);' : ''}">${formatCurrency(ukSales + nonUkSales)}</td>
                         <td>${yoyBadge}</td>
-                        <td>${ukSales > 0 ? formatCurrency(ukSales) : '–'}</td>
-                        <td style="color: var(--sage)">${nonUkSales > 0 ? formatCurrency(nonUkSales) : '–'}</td>
+                        <td style="${ukSales < 0 ? 'color: var(--coral);' : ''}">${ukSales !== 0 ? formatCurrency(ukSales) : '–'}</td>
+                        <td style="color: ${nonUkSales < 0 ? 'var(--coral)' : 'var(--sage)'};">${nonUkSales !== 0 ? formatCurrency(nonUkSales) : '–'}</td>
                         <td class="rolling-total">${formatCurrency(rollingTotal)}</td>
                         <td class="${statusClass}" style="font-weight: 600">${formatCurrency(Math.max(0, headroom))}</td>
                         <td>
@@ -1664,11 +1719,15 @@
         function saveMonth() {
             const month = parseInt(document.getElementById('input-month').value);
             const year = parseInt(document.getElementById('input-year').value);
-            const ukAmount = parseFloat(document.getElementById('input-uk').value) || 0;
-            const nonUkAmount = parseFloat(document.getElementById('input-non-uk').value) || 0;
+            const ukAmount = parseFloat(document.getElementById('input-uk').value);
+            const nonUkAmount = parseFloat(document.getElementById('input-non-uk').value);
             
-            if (ukAmount === 0 && nonUkAmount === 0) {
-                alert('Please enter at least one income figure');
+            // Allow zero and negative values (for credit notes)
+            const hasUk = !isNaN(ukAmount);
+            const hasNonUk = !isNaN(nonUkAmount);
+            
+            if (!hasUk && !hasNonUk) {
+                alert('Please enter at least one turnover figure');
                 return;
             }
             
@@ -1679,17 +1738,20 @@
             const lastYearUk = salesData.uk[lastYearKey] || 0;
             const lastYearNonUk = salesData.nonUk[lastYearKey] || 0;
             const lastYearTotal = lastYearUk + lastYearNonUk;
-            const currentTotal = ukAmount + nonUkAmount;
             
-            // Replace values for the month
-            if (ukAmount > 0) {
-                salesData.uk[key] = ukAmount;
+            const ukValue = hasUk ? ukAmount : 0;
+            const nonUkValue = hasNonUk ? nonUkAmount : 0;
+            const currentTotal = ukValue + nonUkValue;
+            
+            // Replace values for the month (store even if zero to show month was recorded)
+            if (hasUk) {
+                salesData.uk[key] = ukValue;
             } else {
                 delete salesData.uk[key];
             }
             
-            if (nonUkAmount > 0) {
-                salesData.nonUk[key] = nonUkAmount;
+            if (hasNonUk) {
+                salesData.nonUk[key] = nonUkValue;
             } else {
                 delete salesData.nonUk[key];
             }
@@ -1706,7 +1768,15 @@
             
             // Show confirmation with YoY comparison
             const monthName = getMonthName(month);
-            let message = `${monthName} ${year} updated successfully!\n\nTotal: ${formatCurrency(currentTotal)}`;
+            let message = `${monthName} ${year} updated successfully!\n\nNet UK turnover: ${formatCurrency(ukValue)}`;
+            if (nonUkValue !== 0) {
+                message += `\nNet Non-UK turnover: ${formatCurrency(nonUkValue)}`;
+            }
+            message += `\nTotal: ${formatCurrency(currentTotal)}`;
+            
+            if (ukValue < 0 || nonUkValue < 0) {
+                message += `\n\n(Negative values recorded for credit notes/refunds)`;
+            }
             
             if (lastYearTotal > 0) {
                 const percentChange = ((currentTotal - lastYearTotal) / lastYearTotal * 100);
@@ -1719,8 +1789,9 @@
 
         function exportBackup() {
             const backup = {
-                version: 1,
+                version: 2,
                 exportDate: new Date().toISOString(),
+                threshold: getThreshold(),
                 data: salesData
             };
             const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -1730,7 +1801,7 @@
             a.download = `toast-films-backup-${new Date().toISOString().split('T')[0]}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            alert('Backup saved! Store this file safely.');
+            alert('Backup saved! Store this file safely.\n\nIncludes:\n• All monthly turnover data\n• Current VAT threshold (£' + getThreshold().toLocaleString() + ')');
         }
 
         function importBackup(event) {
@@ -1761,7 +1832,7 @@
 
         function calculateThresholdProjection() {
             const currentRolling = getCurrentRolling12Month();
-            const headroom = VAT_THRESHOLD - currentRolling;
+            const headroom = getThreshold() - currentRolling;
             
             if (headroom <= 0) {
                 return { months: 0, message: 'Exceeded', status: 'danger' };
@@ -1866,7 +1937,7 @@
 
         function exportData() {
             const months = getAllMonthsSorted();
-            let csv = 'Month,Total Income,YoY Change,UK Sales,Non-UK Sales,Rolling 12-Month (UK),Headroom,Status\n';
+            let csv = 'Month,Total Net Turnover,YoY Change,UK Net,Non-UK Net,Rolling 12-Month (UK),Headroom,Status,Threshold\n';
             
             months.forEach(key => {
                 const { year, month } = parseMonthKey(key);
@@ -1874,7 +1945,7 @@
                 const nonUkSales = salesData.nonUk[key] || 0;
                 const total = ukSales + nonUkSales;
                 const rollingTotal = getRolling12MonthTotal(key);
-                const headroom = VAT_THRESHOLD - rollingTotal;
+                const headroom = getThreshold() - rollingTotal;
                 const status = headroom <= 0 ? 'EXCEEDED' : headroom < 10000 ? 'Critical' : headroom < 20000 ? 'Warning' : 'Safe';
                 
                 const yoy = getYoYComparison(year, month);
@@ -1883,7 +1954,7 @@
                 else if (yoy.type === 'down') yoyStr = `${yoy.percent.toFixed(1)}%`;
                 else if (yoy.type === 'new') yoyStr = 'NEW';
                 
-                csv += `${getMonthName(month)} ${year},${total.toFixed(2)},${yoyStr},${ukSales.toFixed(2)},${nonUkSales.toFixed(2)},${rollingTotal.toFixed(2)},${Math.max(0, headroom).toFixed(2)},${status}\n`;
+                csv += `${getMonthName(month)} ${year},${total.toFixed(2)},${yoyStr},${ukSales.toFixed(2)},${nonUkSales.toFixed(2)},${rollingTotal.toFixed(2)},${Math.max(0, headroom).toFixed(2)},${status},${getThreshold()}\n`;
             });
             
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -1895,6 +1966,7 @@
         }
 
         function refresh() {
+            initThresholdInput();
             updateStatusBanner();
             updateSummaryStats();
             updateBusinessInsights();
